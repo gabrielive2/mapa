@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    #map { height: 100vh; width: 100vw; margin: 0; padding: 0; }
+    body { margin: 0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script>
+    // Leer coordenadas de la URL si existen
+    const urlParams = new URLSearchParams(window.location.search);
+    var startLat = parseFloat(urlParams.get('slat')) || -33.0472;
+    var startLng = parseFloat(urlParams.get('slng')) || -71.6127;
+    var endLat = parseFloat(urlParams.get('elat')) || -33.0153;
+    var endLng = parseFloat(urlParams.get('elng')) || -71.5500;
+
+    // Crear mapa
+    var map = L.map('map').setView([startLat, startLng], 13);
+
+    // Cargar mapa de OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Marcadores
+    L.marker([startLat, startLng]).addTo(map).bindPopup("Inicio").openPopup();
+    L.marker([endLat, endLng]).addTo(map).bindPopup("Destino");
+
+    // Calcular y dibujar la ruta
+    var osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
+
+    fetch(osrmUrl)
+      .then(response => response.json())
+      .then(data => {
+        if (data.routes && data.routes.length > 0) {
+          var route = data.routes[0].geometry.coordinates;
+          var latLngs = route.map(coord => [coord[1], coord[0]]);
+          var polyline = L.polyline(latLngs, {color: 'blue', weight: 5, opacity: 0.7}).addTo(map);
+          map.fitBounds(polyline.getBounds());
+        }
+      })
+      .catch(err => console.error(err));
+  </script>
+</body>
+</html>
